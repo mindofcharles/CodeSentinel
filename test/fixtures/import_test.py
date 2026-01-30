@@ -1,0 +1,2 @@
+import safe
+safe.hello()
