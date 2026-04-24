@@ -1,6 +1,7 @@
 import logging
+import json
 from openai import OpenAI, APIConnectionError
-from .config import config
+from .config_parser import config
 
 class AIEngine:
     def __init__(self):
@@ -17,87 +18,131 @@ class AIEngine:
         else:
             logging.warning("OPENAI_API_KEY not found. AI features will be disabled or fail.")
 
-    def analyze_code(self, filename: str, content: str) -> str:
-        """
-        Sends code to the LLM for security analysis.
-        Returns the analysis result.
-        """
+    def check_connectivity(self) -> bool:
+        """Checks if the AI provider is reachable and the model is available."""
         if not self.client:
-            return "ERROR: AI Client not initialized (Missing API Key?)"
-
-        system_prompt = (
-            "You are CodeSentinel, an expert Cyber Security Auditor. "
-            "Your task is to analyze the provided source code for: "
-            "1. Malicious intent (backdoors, data exfiltration, logic bombs). "
-            "2. Dangerous coding practices (SQL injection, eval(), hardcoded secrets). "
-            "3. Obfuscation techniques used to hide payload. "
-            "\n"
-            "Output Format:"
-            "- If the code appears BENIGN/SAFE, simply reply with '[SAFE]' and a very brief reason."
-            "- If the code is SUSPICIOUS or MALICIOUS, reply with '[DANGER]' or '[WARNING]' followed by a concise explanation of the specific threat."
-            "- Keep your response under 3 sentences."
-        )
-
-        user_prompt = f"File Name: {filename}\n\nCode Content:\n```\n{content}\n```"
-
+            return False
         try:
-            response = self.client.chat.completions.create(
-                model=config.AI_MODEL,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=config.AI_TEMPERATURE, 
-                max_tokens=config.AI_MAX_TOKENS
-            )
-            return response.choices[0].message.content.strip()
-        except APIConnectionError:
-            return "ERROR: Could not connect to AI Provider. Check URL/Network."
+            # Simple list models call to check connectivity
+            self.client.models.list()
+            return True
         except Exception as e:
-            return f"ERROR: AI Analysis failed - {str(e)}"
+            logging.error(f"API Connectivity check failed: {e}")
+            return False
 
-    def analyze_deep(self, filename: str, content: str, dependencies: dict, full_context: bool = False) -> str:
-        """
-        Performs deep analysis of a file with the context of its dependencies.
-        `dependencies` is a dict: {filename: content}
-        """
-        if not self.client:
-            return "ERROR: AI Client not initialized"
-
-        context_type = "Full Source Code" if full_context else "Skeletal Structure (classes/functions)"
+    def _get_json_response(self, messages: list) -> tuple[dict, dict]:
+        """Helper to get a JSON response from the LLM, handling potential Markdown wrapping."""
+        interaction_log = {
+            "request_messages": messages,
+            "raw_response": ""
+        }
         
-        system_prompt = (
-            "You are CodeSentinel, performing a DEEP SECURITY AUDIT. "
-            f"You are provided with the 'Main File' code and the '{context_type}' of its dependencies. "
-            "Your goal is to trace logic and data flow to identify cross-file vulnerabilities or malicious intent. "
-            "\n"
-            "Output Format:"
-            "- Reply with '[SAFE]' if the system logic is benign."
-            "- Reply with '[DANGER]' or '[WARNING]' if you find cross-file threats, explaining the chain of execution."
-            "- Keep your response under 4 sentences."
-        )
+        last_error_reason = "Unknown Error"
+        
+        for attempt in range(config.AI_MAX_RETRIES):
+            content = ""
+            try:
+                response = self.client.chat.completions.create(
+                    model=config.AI_MODEL,
+                    messages=messages,
+                    temperature=config.AI_TEMPERATURE,
+                    max_tokens=config.AI_MAX_TOKENS,
+                    response_format={"type": "json_object"}
+                )
+                content = response.choices[0].message.content
+                if not content:
+                    content = ""
+                content = content.strip()
+                interaction_log["raw_response"] = content
+                
+                if not content:
+                    logging.warning(f"AI returned empty output on attempt {attempt + 1}. Retrying...")
+                    last_error_reason = "AI returned empty output."
+                    continue
+                
+                # Robust JSON extraction: handle Markdown blocks
+                clean_content = content
+                if clean_content.startswith("```"):
+                    # Remove starting marker (e.g., ```json or ```)
+                    clean_content = clean_content.split("\n", 1)[-1]
+                    # Remove ending marker
+                    if clean_content.endswith("```"):
+                        clean_content = clean_content.rsplit("```", 1)[0]
+                    clean_content = clean_content.strip()
+                
+                # If the first split didn't catch everything (e.g. text before/after blocks)
+                # we can try a regex-like approach to find the first '{' and last '}'
+                start_idx = clean_content.find('{')
+                end_idx = clean_content.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    clean_content = clean_content[start_idx:end_idx+1]
+                    
+                # If AI returned an empty JSON object due to some issue
+                if clean_content == "{}":
+                    logging.warning(f"AI returned empty JSON on attempt {attempt + 1}. Retrying...")
+                    last_error_reason = "AI returned empty JSON."
+                    continue
+    
+                return json.loads(clean_content), interaction_log
+                
+            except json.JSONDecodeError as e:
+                logging.error(f"Failed to parse AI JSON. Raw content: \n{content}\nError: {e}")
+                # Do a fallback check just in case the AI didn't use JSON format at all but returned text
+                if "[DANGER]" in content.upper() or "DANGER" in content.upper():
+                    return {"status": "DANGER", "reason": content[:200]}, interaction_log
+                elif "[WARNING]" in content.upper() or "WARNING" in content.upper():
+                    return {"status": "WARNING", "reason": content[:200]}, interaction_log
+                elif "[SAFE]" in content.upper() or "SAFE" in content.upper():
+                    return {"status": "SAFE", "reason": content[:200]}, interaction_log
+                
+                logging.warning(f"Invalid JSON and fallback failed on attempt {attempt + 1}. Retrying...")
+                last_error_reason = "AI returned invalid JSON. Check interaction logs."
+                continue
+            except APIConnectionError:
+                return {"status": "ERROR", "reason": "Could not connect to AI Provider."}, interaction_log
+            except Exception as e:
+                logging.error(f"AI Analysis failed on attempt {attempt + 1}: {e}")
+                last_error_reason = f"AI Analysis failed: {str(e)}"
+                continue
+
+        return {"status": "ERROR", "reason": f"Failed after {config.AI_MAX_RETRIES} attempts. Last error: {last_error_reason}"}, interaction_log
+
+    def analyze_code(self, filename: str, content: str) -> tuple[dict, dict]:
+        """Sends code to the LLM for security analysis."""
+        if not self.client:
+            return {"status": "ERROR", "reason": "AI Client not initialized."}, {}
+
+        prompt_conf = config.PROMPTS.get("standard", {})
+        sys_prompt = prompt_conf.get("system", "Analyze code for security.")
+        user_tmpl = prompt_conf.get("user", "File: {filename}\nCode: {content}")
+        
+        user_prompt = user_tmpl.format(filename=filename, content=content)
+
+        messages = [
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        return self._get_json_response(messages)
+
+    def analyze_deep(self, filename: str, content: str, dependencies: dict, full_context: bool = False) -> tuple[dict, dict]:
+        """Performs deep analysis of a file with dependency context."""
+        if not self.client:
+            return {"status": "ERROR", "reason": "AI Client not initialized."}, {}
+
+        prompt_conf = config.PROMPTS.get("deep", {})
+        sys_prompt = prompt_conf.get("system", "Perform deep security audit.")
+        user_tmpl = prompt_conf.get("user", "File: {filename}\nCode: {content}\nContext: {context}")
 
         context_str = ""
         for dep_name, dep_content in dependencies.items():
-            context_str += f"--- Dependency ({'FULL' if full_context else 'Skeleton'}): {dep_name} ---\n{dep_content}\n\n"
+            context_str += f"--- Dependency: {dep_name} ---\n{dep_content}\n\n"
 
-        user_prompt = (
-            f"MAIN FILE: {filename}\n"
-            f"CODE:\n```\n{content}\n```\n\n"
-            f"DEPENDENCY CONTEXT:\n{context_str}"
-        )
+        user_prompt = user_tmpl.format(filename=filename, content=content, context=context_str)
 
-        try:
-            response = self.client.chat.completions.create(
-                model=config.AI_MODEL,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=config.AI_TEMPERATURE,
-                max_tokens=config.AI_MAX_TOKENS
-            )
-            result = response.choices[0].message.content.strip()
-            return result if result else "ERROR: AI returned an empty response."
-        except Exception as e:
-            return f"ERROR: Deep Analysis failed - {str(e)}"
+        messages = [
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        return self._get_json_response(messages)

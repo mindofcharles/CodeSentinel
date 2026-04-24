@@ -31,9 +31,9 @@ CodeSentinel is built as a modular CLI application. This document describes the 
 - **Streaming Reports**: Writes results to JSON files in real-time to prevent data loss in case of a crash.
 - **Statistics**: Tracks the count of Safe, Warning, Danger, and Error results.
 
-### 5. `Config` (`src/config.py`)
+### 5. `Config` (`src/config_parser.py` & `config.yaml`)
 
-- Centralized configuration using a class-based approach.
+- Centralized configuration using a class-based parser that reads from `config.yaml`.
 - Supports default values that can be overridden by environment variables or CLI flags.
 
 ## Data Flow

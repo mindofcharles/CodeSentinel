@@ -1,0 +1,103 @@
+openai_api_key: ""
+openai_base_url: "http://localhost:1234/v1"
+ai_model: "AI"
+ai_temperature: 0.1
+ai_max_tokens: 32768
+ai_max_retries: 3
+max_file_size: 10485760
+
+target_extensions:
+  - ".py"
+  - ".js"
+  - ".ts"
+  - ".jsx"
+  - ".tsx"
+  - ".go"
+  - ".rs"
+  - ".java"
+  - ".c"
+  - ".cpp"
+  - ".h"
+  - ".cs"
+  - ".php"
+  - ".rb"
+  - ".sh"
+  - ".bash"
+  - ".zsh"
+  - ".bat"
+  - ".ps1"
+  - ".cmd"
+  - ".html"
+  - ".xml"
+  - ".json"
+  - ".yaml"
+  - ".yml"
+
+ignore_dirs:
+  - ".git"
+  - ".svn"
+  - ".hg"
+  - ".idea"
+  - ".vscode"
+  - "node_modules"
+  - "venv"
+  - ".venv"
+  - "env"
+  - "__pycache__"
+  - "dist"
+  - "build"
+  - "target"
+  - "bin"
+  - "obj"
+  - "lib"
+  - "libs"
+
+prompts:
+  standard:
+    system: |
+      You are CodeSentinel, an expert Cyber Security Auditor.
+      Analyze the code for malicious intent, dangerous practices, and obfuscation.
+      You MUST return your analysis in valid JSON format with the following keys:
+      - "status": One of "SAFE", "WARNING", "DANGER".
+      - "reason": A concise explanation (max 2 sentences).
+    user: "File Name: {filename}\n\nCode Content:\n```\n{content}\n```"
+  deep:
+    system: |
+      You are CodeSentinel, performing a DEEP SECURITY AUDIT.
+      Trace logic and data flow across the main file and its dependencies.
+      You MUST return your analysis in valid JSON format with the following keys:
+      - "status": One of "SAFE", "WARNING", "DANGER".
+      - "reason": A concise explanation of the cross-file threat (max 3 sentences).
+    user: |
+      MAIN FILE: {filename}
+      CODE:
+      ```
+      {content}
+      ```
+
+      DEPENDENCY CONTEXT:
+      {context}
+
+tree_sitter:
+  python:
+    package: "tree_sitter_python"
+    extensions: [".py"]
+    skeleton_query: |
+      (class_definition name: (identifier) @name body: (block) @body)
+      (function_definition name: (identifier) @name body: (block) @body)
+    deps_query: |
+      (import_from_statement module_name: (dotted_name) @mod)
+      (import_statement name: (dotted_name) @mod)
+      (import_from_statement module_name: (relative_import) name: (dotted_name) @mod)
+      (import_from_statement module_name: (relative_import) name: (aliased_import name: (dotted_name) @mod))
+  javascript:
+    package: "tree_sitter_javascript"
+    extensions: [".js", ".ts", ".jsx", ".tsx"]
+    skeleton_query: |
+      (class_definition name: (identifier) @name)
+      (function_definition name: (identifier) @name)
+      (method_definition name: (property_identifier) @name)
+      (variable_declarator name: (identifier) @name value: (arrow_function))
+    deps_query: |
+      (import_statement source: (string) @mod)
+      (call_expression function: (identifier) @func (#eq? @func "require") arguments: (arguments (string) @mod))

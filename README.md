@@ -16,17 +16,17 @@ CodeSentinel is an AI-powered security auditor designed to scan project director
 
 - **AI-Powered Analysis**: Uses LLMs to audit code for backdoors, SQL injection, `eval()` usage, and more.
 - **Deep Analysis Mode**: Traces cross-file logic by providing the AI with the context of local dependencies (either full code or skeletal structures).
-- **Multi-Language Support**: Optimized for Python and JavaScript/TypeScript using Tree-sitter, with heuristic support for many other languages.
+- **Multi-Language Support**: Optimized for Python and JavaScript/TypeScript using Tree-sitter.
 - **Intelligent Skeletons**: Extracts class and function signatures to provide context without exhausting LLM token limits.
 - **Detailed Reporting**: Generates interactive CLI output and structured JSON reports (Full scan vs. Problems only).
-- **Flexible Backend**: Compatible with OpenAI, LM Studio, Ollama, and other OpenAI-compatible APIs.
+- **Flexible Backend**: Compatible with OpenAI, LM Studio, llama.cpp, and other OpenAI-compatible APIs.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
 - Python 3.10+
-- (Optional) A local LLM runner like LM Studio, Ollama, llama.cpp ...
+- (Optional) A local LLM runner like  llama.cpp, LM Studio, OpenAI ...
 
 ### Installation
 
@@ -40,16 +40,18 @@ CodeSentinel is an AI-powered security auditor designed to scan project director
 2. Install dependencies:
 
    ```bash
+   python -m venv venv
+   source venv/bin/activate
    pip install -r requirements.txt
    ```
 
 ## ⚙️ Configuration
 
-Edit `src/config.py` or use environment variables to configure the scanner:
+Edit `config.yaml` or use environment variables to configure the scanner:
 
-- `OPENAI_API_KEY`: Your API key (default: `any-key-for-local`).
-- `OPENAI_BASE_URL`: The API endpoint (e.g., `http://localhost:1234/v1` for LM Studio).
-- `AI_MODEL`: The name of the model to use.
+- `openai_api_key`: Your API key (default: `any-key-for-local`).
+- `openai_base_url`: The API endpoint (e.g., `http://localhost:1234/v1` for LM Studio).
+- `ai_model`: The name of the model to use.
 
 ## 📖 Usage
 
@@ -84,6 +86,7 @@ Reports are saved in the `reports/scan_YYYYMMDD_HHMMSS/` directory:
 - `full_report.json`: Detailed results for every scanned file.
 - `problems_report.json`: Filtered results containing only `[DANGER]` and `[WARNING]` status.
 - `project_structure.txt`: A text-based visualization of the scanned directory.
+- `logs/`: Raw AI interaction logs, mirroring the scanned project's structure.
 
 ## 🧪 Testing
 
@@ -94,4 +97,4 @@ python -m unittest discover test
 ```
 
 ---
-*Documentation maintained by Charles Tsaur. Last updated: 2026-01-30.*
+*Documentation maintained by mindofcharles. Last updated: 2026-04-24.*

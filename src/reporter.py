@@ -22,6 +22,7 @@ class Reporter:
         # Streaming state
         self.report_dir = "reports"
         self.scan_path = None
+        self.logs_path = None
         self.full_report_file = None
         self.problems_report_file = None
         
@@ -34,8 +35,7 @@ class Reporter:
 
     def print_header(self):
         self.console.print(Panel.fit(
-            "[bold green]CodeSentinel[/bold green] - AI Powered Malware Scanner",
-            subtitle="v1.0.0"
+            "[bold green]CodeSentinel[/bold green] - AI Powered Malware Scanner"
         ))
 
     def print_target_tree(self, scanner):
@@ -85,6 +85,10 @@ class Reporter:
         if not os.path.exists(self.scan_path):
             os.makedirs(self.scan_path)
             
+        self.logs_path = os.path.join(self.scan_path, "logs")
+        if not os.path.exists(self.logs_path):
+            os.makedirs(self.logs_path)
+            
         # Save Tree structure if available
         if self.last_tree:
             tree_path = os.path.join(self.scan_path, "project_structure.txt")
@@ -129,6 +133,29 @@ class Reporter:
         self.problems_report_file.write(p_preamble)
         self.problems_report_file.flush()
 
+    def log_interaction(self, file_path, interaction_data):
+        """Saves raw AI input and output to a plain text log file for debugging."""
+        if not self.logs_path:
+            return
+        
+        log_file = os.path.join(self.logs_path, f"{file_path}.log")
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        
+        try:
+            with open(log_file, "w", encoding="utf-8") as f:
+                f.write(f"=== AI INTERACTION LOG FOR: {file_path} ===\n\n")
+                f.write("=== INPUT (REQUEST MESSAGES) ===\n")
+                for msg in interaction_data.get("request_messages", []):
+                    role = msg.get("role", "unknown").upper()
+                    content = msg.get("content", "")
+                    f.write(f"[{role}]:\n{content}\n\n")
+                
+                f.write("=== OUTPUT (RAW RESPONSE) ===\n")
+                f.write(interaction_data.get("raw_response", ""))
+                f.write("\n==========================================\n")
+        except Exception as e:
+            self.console.print(f"[dim red]Failed to save interaction log: {e}[/dim red]")
+
     def log_result(self, file_path, status, analysis):
         """
         Logs a single file analysis result.
@@ -143,8 +170,6 @@ class Reporter:
 
         # Update stats and determine color/icon
         status_upper = status.upper()
-        # Note: Analysis text check removed from here to prevent duplicate counting logic.
-        # We rely on the 'status' passed from main.py which is now robust.
         
         is_error = False
         is_danger = False
@@ -173,7 +198,6 @@ class Reporter:
             icon = "OK"
         else:
             # Default to warning/info if status is UNKNOWN but let's check analysis text as fallback
-            # This handles cases where main.py couldn't extract a clear tag
             a_up = analysis.upper()
             if "DANGER" in a_up or "MALICIOUS" in a_up:
                 is_danger = True
@@ -220,12 +244,8 @@ class Reporter:
 
         # Close Problems Report
         if self.problems_report_file:
-            # We can optionally append a summary object here if strictly valid JSON allows mixed types in array (no),
-            # or just close the object.
             self.problems_report_file.write("\n  ],\n")
-            # Hack to add summary at the end since we couldn't at the start
             summary_footer = json.dumps({"summary": {"total_problems": self.problems_count}}, indent=2)
-            # Remove opening brace to merge
             self.problems_report_file.write('  "summary": {\n    "total_problems": ' + str(self.problems_count) + '\n  }\n}')
             self.problems_report_file.close()
             self.problems_report_file = None
@@ -235,6 +255,7 @@ class Reporter:
             self.console.print(f"  - Full Report: full_report.json")
             self.console.print(f"  - Project Tree: project_structure.txt")
             self.console.print(f"  - Problems Only: problems_report.json ({self.problems_count} items)")
+            self.console.print(f"  - Raw Interaction Logs: logs/ directory")
 
     def print_summary(self):
         """Prints a summary table."""

@@ -6,7 +6,7 @@ Standard security scanners often look at files in isolation. CodeSentinel's **De
 
 When `--deep` is enabled, CodeSentinel performs the following steps for each file:
 
-1. **Dependency Extraction**: It uses Tree-sitter (or regex fallback) to find `import` statements (Python) or `require/import` statements (JS/TS).
+1. **Dependency Extraction**: It uses Tree-sitter to find `import` statements (Python) or `require/import` statements (JS/TS).
 2. **Path Resolution**: It attempts to find the corresponding source file on the local file system.
 3. **Context Building**:
     - By default, it extracts a **Skeleton** of the dependency (class and function signatures).

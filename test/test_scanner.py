@@ -3,13 +3,14 @@ import os
 import pathlib
 import sys
 from src.scanner import Scanner
-from src.config import config
+from src.config_parser import config
 
 class TestScanner(unittest.TestCase):
     def setUp(self):
         self.base_dir = pathlib.Path(__file__).parent.parent
         self.fixtures_dir = self.base_dir / "test" / "fixtures"
         self.scanner = Scanner(str(self.fixtures_dir))
+        self.scanner.pre_scan_check()
 
     def test_has_tree_sitter(self):
         from src.scanner import HAS_TREE_SITTER
