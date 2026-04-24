@@ -16,7 +16,7 @@ CodeSentinel is an AI-powered security auditor designed to scan project director
 
 - **AI-Powered Analysis**: Uses LLMs to audit code for backdoors, SQL injection, `eval()` usage, and more.
 - **Deep Analysis Mode**: Traces cross-file logic by providing the AI with the context of local dependencies (either full code or skeletal structures).
-- **Multi-Language Support**: Optimized for Python and JavaScript/TypeScript using Tree-sitter.
+- **Multi-Language Support**: Simply install the corresponding Tree-sitter package.
 - **Intelligent Skeletons**: Extracts class and function signatures to provide context without exhausting LLM token limits.
 - **Detailed Reporting**: Generates interactive CLI output and structured JSON reports (Full scan vs. Problems only).
 - **Flexible Backend**: Compatible with OpenAI, LM Studio, llama.cpp, and other OpenAI-compatible APIs.
