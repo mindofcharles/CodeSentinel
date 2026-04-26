@@ -1,4 +1,4 @@
-# API Integration Guide
+# AI Model API Settings Guide
 
 CodeSentinel uses the OpenAI Python SDK, making it compatible with any API that adheres to the OpenAI chat completions specification.
 
@@ -8,7 +8,7 @@ Running a local LLM ensures your code never leaves your machine.
 
 ### LM Studio
 
-1. Load a model (e.g., `Meta-Llama-3-8B-Instruct`).
+1. Load a model (e.g., `gpt-oss-20b`).
 2. Go to the **Local Server** tab and click **Start Server**.
 3. In `config.yaml`, set:
 
@@ -22,7 +22,7 @@ Running a local LLM ensures your code never leaves your machine.
 1. Start a simple service using `llama-server`, with the following recommended parameters:
 
    ```bash
-   llama-server -m ~/model.gguf -c 32768 -np 1 --port 1234
+   llama-server -m ~/model.gguf --ctx-size 32768 --parallel 1 --port 8900
    ```
 
 2. In `config.yaml`, set:
@@ -49,6 +49,6 @@ Running a local LLM ensures your code never leaves your machine.
    ai_model: "gpt-4o"
    ```
 
-### Others (Groq, Together AI, etc.)
+### Others
 
 Simply update the `openai_base_url` and `ai_model` in `config.yaml` to match the provider's documentation.

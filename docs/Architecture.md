@@ -2,6 +2,9 @@
 
 CodeSentinel is built as a modular CLI application. This document describes the internal components and their interactions.
 
+> [!NOTE]
+> CodeSentinel is not fully developed yet.
+
 ## Component Overview
 
 ### 1. `src/main.py` (Entry Point)
