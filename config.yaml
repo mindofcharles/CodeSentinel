@@ -7,43 +7,76 @@ ai_max_retries: 3
 max_file_size: 10485760
 
 target_extensions:
+
+  # Python
   - ".py"
+
+  # C / C++
+  - ".c"
+  - ".cpp"
+  - ".cc"
+  - ".cxx"
+  - ".h"
+  - ".hpp"
+
+  # Go
+  - ".go"
+
+  # Rust
+  - ".rs"
+
+  # C#
+  - ".cs"
+
+  # Java
+  - ".java"
+
+  # JavaScript / TypeScript
   - ".js"
+  - ".mjs"
+  - ".cjs"
   - ".ts"
   - ".jsx"
   - ".tsx"
-  - ".go"
-  - ".rs"
-  - ".java"
-  - ".c"
-  - ".cpp"
-  - ".h"
-  - ".cs"
-  - ".php"
-  - ".rb"
-  - ".sh"
-  - ".bash"
-  - ".zsh"
-  - ".bat"
-  - ".ps1"
-  - ".cmd"
+
+  # Markup
   - ".html"
   - ".xml"
+  
+  # Data
   - ".json"
   - ".yaml"
   - ".yml"
 
+  # Scripting
+  - ".sh"
+  - ".bash"
+  - ".zsh"
+  - ".bat"
+  - ".cmd"
+  - ".ps1"
+
+  # Other languages
+  - ".php"
+  - ".rb"
+
 ignore_dirs:
+
+  # VCS
   - ".git"
   - ".svn"
   - ".hg"
-  - ".idea"
-  - ".vscode"
+
+  # Node
   - "node_modules"
+
+  # Python
   - "venv"
   - ".venv"
   - "env"
   - "__pycache__"
+
+  # Build outputs
   - "dist"
   - "build"
   - "target"
@@ -51,6 +84,10 @@ ignore_dirs:
   - "obj"
   - "lib"
   - "libs"
+
+  # IDE
+  - ".idea"
+  - ".vscode"
 
 prompts:
   standard:
