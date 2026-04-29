@@ -24,6 +24,12 @@ Modify these directly in `config.yaml`:
 - `target_extensions`: A list of file extensions that the scanner will process (e.g., `.py`, `.js`, `.go`).
 - `ignore_dirs`: A list of directory names to skip (e.g., `.git`, `node_modules`, `venv`).
 
+## Tree-sitter Parsers
+
+The base `tree-sitter` package enables structural parsing, but each language needs its own parser package, such as `tree-sitter-python` or `tree-sitter-javascript`.
+
+If a parser configured in `config.yaml` is missing, CodeSentinel warns before scanning and skips dependency extraction/skeleton extraction for that language. The scanner does not install parser packages automatically.
+
 ## Environment Variables
 
 ### `OPENAI_API_KEY`

@@ -2,7 +2,7 @@ import unittest
 import os
 import pathlib
 import sys
-from src.scanner import Scanner
+from src.scanner import FileReadError, Scanner
 from src.config_parser import config
 
 class TestScanner(unittest.TestCase):
@@ -40,6 +40,33 @@ class TestScanner(unittest.TestCase):
         # Should find 'safe.py' as a dependency
         dep_names = [d.name for d in deps]
         self.assertIn("safe.py", dep_names)
+
+    def test_extract_relative_import_dependencies(self):
+        main_path = self.base_dir / "src" / "main.py"
+        scanner = Scanner(str(self.base_dir / "src"))
+        scanner.pre_scan_check()
+
+        deps = scanner.extract_dependencies(main_path, scanner.read_file(main_path))
+        dep_names = {d.name for d in deps}
+
+        self.assertIn("scanner.py", dep_names)
+        self.assertIn("ai_engine.py", dep_names)
+        self.assertIn("reporter.py", dep_names)
+        self.assertIn("config_parser.py", dep_names)
+        self.assertNotIn("Scanner.py", dep_names)
+
+    def test_skeleton_does_not_include_body_capture_lines(self):
+        safe_path = self.fixtures_dir / "safe.py"
+        skeleton = self.scanner.get_skeleton(safe_path)
+
+        self.assertIn("def hello(): ...", skeleton)
+        self.assertNotIn('print("Hello world") ...', skeleton)
+
+    def test_read_file_failure_raises(self):
+        missing_path = self.fixtures_dir / "missing.py"
+
+        with self.assertRaises(FileReadError):
+            self.scanner.read_file(missing_path)
 
 if __name__ == "__main__":
     unittest.main()

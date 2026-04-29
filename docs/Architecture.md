@@ -21,18 +21,21 @@ CodeSentinel is built as a modular CLI application. This document describes the 
 - **Tree-sitter Integration**: Uses Tree-sitter parsers to understand the AST (Abstract Syntax Tree) of Python and JavaScript files.
 - **Skeleton Extraction**: Extracts signatures (class/function names) to provide a high-level overview of a file without its implementation details.
 - **Dependency Resolution**: Identifies local imports/requires and resolves them to absolute file paths on disk.
+- **Read Errors**: Raises a file-read error instead of passing error text to the AI as source code.
 
 ### 3. `AIEngine` (`src/ai_engine.py`)
 
 - **Client Management**: Wraps the OpenAI Python client.
 - **Prompt Engineering**: Contains specialized system prompts for security auditing.
 - **Context Construction**: Formats the main file and its dependencies (if in Deep mode) into a prompt for the LLM.
+- **Retry Handling**: Retries malformed/empty AI responses, but reports context-window/token-limit errors immediately.
 
 ### 4. `Reporter` (`src/reporter.py`)
 
 - **Visuals**: Uses the `rich` library to print tables, trees, and panels to the console.
 - **Streaming Reports**: Writes results to JSON files in real-time to prevent data loss in case of a crash.
 - **Statistics**: Tracks the count of Safe, Warning, Danger, and Error results.
+- **Finalization**: Closes report JSON arrays in the main scan `finally` block so interrupted scans still leave parseable reports.
 
 ### 5. `Config` (`src/config_parser.py` & `config.yaml`)
 
@@ -50,4 +53,4 @@ CodeSentinel is built as a modular CLI application. This document describes the 
         - For each dependency: `Scanner.get_skeleton()` or `Scanner.read_file()`.
         - `AIEngine.analyze_deep(file, content, dependencies)`.
 4. **Reporting**: `Reporter.log_result()` updates the CLI and writes to JSON.
-5. **Finalization**: `Reporter.finalize_reports()` closes file handles and prints a summary table.
+5. **Finalization**: `Reporter.finalize_reports()` closes file handles and prints a summary table, including after interrupts or fatal scan errors once report files have been initialized.

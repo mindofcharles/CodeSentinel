@@ -13,6 +13,9 @@ try:
 except ImportError:
     HAS_TREE_SITTER = False
 
+class FileReadError(Exception):
+    """Raised when a source file cannot be read for analysis."""
+
 class Scanner:
     def __init__(self, target_dir: str):
         self.target_dir = pathlib.Path(target_dir)
@@ -101,7 +104,7 @@ class Scanner:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 return f.read()
         except Exception as e:
-            return f"Error reading file: {str(e)}"
+            raise FileReadError(f"Failed to read '{file_path}': {e}") from e
 
     def get_skeleton(self, file_path: pathlib.Path) -> str:
         """
@@ -141,10 +144,14 @@ class Scanner:
 
             if isinstance(captures, dict):
                 for tag, nodes in captures.items():
+                    if tag != "name":
+                        continue
                     for node in nodes:
                         process_node(node)
             else:
                 for node, tag in captures:
+                    if tag != "name":
+                        continue
                     process_node(node)
             
             return "\n".join(skeleton_parts) if skeleton_parts else content[:500]
@@ -180,7 +187,7 @@ class Scanner:
                 captures = cursor.captures(tree.root_node)
 
             def process_dep(node):
-                mod_name = content[node.start_byte:node.end_byte].strip("'\"")
+                mod_name = self._module_name_from_capture(node, content, ext)
                 resolved = self._resolve_dependency(file_path, mod_name, ext)
                 if resolved:
                     deps.append(resolved)
@@ -196,11 +203,38 @@ class Scanner:
             pass
         return deps
 
+    def _module_name_from_capture(self, node, content: str, ext: str) -> str:
+        """Normalizes captured import nodes into resolvable module names."""
+        mod_name = content[node.start_byte:node.end_byte].strip("'\"")
+
+        if ext == '.py':
+            parent = node.parent
+            if parent and parent.type == 'import_from_statement':
+                module_node = parent.child_by_field_name('module_name')
+                if module_node:
+                    module_name = content[module_node.start_byte:module_node.end_byte]
+                    if module_node.type == 'relative_import':
+                        if module_name.strip('.') == '':
+                            return module_name + mod_name
+                        return module_name
+                    return module_name
+
+        return mod_name
+
     def _resolve_dependency(self, file_path: pathlib.Path, mod_name: str, ext: str) -> pathlib.Path:
         """Centralized logic to resolve a module name to a local path."""
-        rel_path = mod_name.replace('.', '/')
-        
         potential_roots = [file_path.parent, self.target_dir]
+
+        if ext == '.py' and mod_name.startswith('.'):
+            leading_dots = len(mod_name) - len(mod_name.lstrip('.'))
+            rel_module = mod_name[leading_dots:]
+            root = file_path.parent
+            for _ in range(max(leading_dots - 1, 0)):
+                root = root.parent
+            potential_roots = [root]
+            rel_path = rel_module.replace('.', '/')
+        else:
+            rel_path = mod_name.replace('.', '/')
         
         for root in potential_roots:
             if ext == '.py':

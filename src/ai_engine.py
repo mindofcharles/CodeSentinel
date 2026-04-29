@@ -1,6 +1,6 @@
 import logging
 import json
-from openai import OpenAI, APIConnectionError
+from openai import APIConnectionError, APIStatusError, BadRequestError, OpenAI
 from .config_parser import config
 
 class AIEngine:
@@ -39,6 +39,20 @@ class AIEngine:
         
         last_error_reason = "Unknown Error"
         
+        def is_context_limit_error(error: Exception) -> bool:
+            message = str(error).lower()
+            context_markers = [
+                "context length",
+                "context window",
+                "maximum context",
+                "max context",
+                "token limit",
+                "too many tokens",
+                "reduce the length",
+                "prompt is too long",
+            ]
+            return any(marker in message for marker in context_markers)
+
         for attempt in range(config.AI_MAX_RETRIES):
             content = ""
             try:
@@ -98,9 +112,23 @@ class AIEngine:
                 logging.warning(f"Invalid JSON and fallback failed on attempt {attempt + 1}. Retrying...")
                 last_error_reason = "AI returned invalid JSON. Check interaction logs."
                 continue
+            except BadRequestError as e:
+                if is_context_limit_error(e):
+                    return {"status": "ERROR", "reason": f"AI context limit exceeded: {str(e)}"}, interaction_log
+                logging.error(f"AI bad request on attempt {attempt + 1}: {e}")
+                last_error_reason = f"AI bad request: {str(e)}"
+                continue
+            except APIStatusError as e:
+                if getattr(e, "status_code", None) == 400 and is_context_limit_error(e):
+                    return {"status": "ERROR", "reason": f"AI context limit exceeded: {str(e)}"}, interaction_log
+                logging.error(f"AI API status error on attempt {attempt + 1}: {e}")
+                last_error_reason = f"AI API status error: {str(e)}"
+                continue
             except APIConnectionError:
                 return {"status": "ERROR", "reason": "Could not connect to AI Provider."}, interaction_log
             except Exception as e:
+                if is_context_limit_error(e):
+                    return {"status": "ERROR", "reason": f"AI context limit exceeded: {str(e)}"}, interaction_log
                 logging.error(f"AI Analysis failed on attempt {attempt + 1}: {e}")
                 last_error_reason = f"AI Analysis failed: {str(e)}"
                 continue

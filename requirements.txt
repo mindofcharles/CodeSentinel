@@ -1,7 +1,8 @@
 openai
 python-dotenv
 rich
+PyYAML
+
 tree-sitter
 tree-sitter-python
 tree-sitter-javascript
-PyYAML

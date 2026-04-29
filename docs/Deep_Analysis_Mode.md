@@ -13,6 +13,8 @@ When `--deep` is enabled, CodeSentinel performs the following steps for each fil
     - If `--full-deps` is used, it reads the **entire source code** of the dependency.
 4. **AI Audit**: The AI receives the main file's code *plus* the context of all resolved dependencies, allowing it to trace logic across file boundaries.
 
+If a configured Tree-sitter parser package is not installed, CodeSentinel warns before scanning and skips structural dependency extraction for that language. The file can still be scanned in standard mode, but deep dependency context for that language will be incomplete.
+
 ## Skeletons vs. Full Deps
 
 ### Skeletons (Default)
@@ -32,7 +34,7 @@ Skeletons are designed to save tokens and fit within the LLM's context window.
 ### Full Dependencies (`--full-deps`)
 
 - **Pros**: Most accurate analysis; AI can see exactly what the dependency does.
-- **Cons**: High token usage, slower, may exceed model limits for large projects.
+- **Cons**: High token usage, slower, may exceed model limits for large projects. Context-limit errors are reported immediately instead of being retried.
 
 ## Use Cases
 

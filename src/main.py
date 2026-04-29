@@ -1,8 +1,7 @@
 import argparse
 import sys
 import os
-import json
-from .scanner import Scanner
+from .scanner import FileReadError, Scanner
 from .ai_engine import AIEngine
 from .reporter import Reporter
 from .config_parser import config
@@ -66,76 +65,94 @@ def main():
     files_found = 0
     analyzed_files = set()
     
-    try:
-        all_files = list(scanner.get_files())
-        if not args.dry_run:
-            reporter.init_reports(len(all_files))
-            
-        for file_path in all_files:
-            files_found += 1
-            rel_file_path = os.path.relpath(file_path, target_path)
-
-            if args.dry_run:
-                reporter.console.print(f"[dim]Found: {rel_file_path}[/dim]")
-                continue
-
-            analysis_data = None
-            interaction_log = None
-            if args.deep:
-                if file_path in analyzed_files: continue
-                
-                content = scanner.read_file(file_path)
-                if not content.strip():
-                    reporter.log_result(rel_file_path, "[SAFE]", "Empty file")
-                    continue
-
-                deps_paths = scanner.extract_dependencies(file_path, content)
-                if not deps_paths:
-                    reporter.console.print(f"[dim]Analyzing {rel_file_path}...[/dim]", end="\r")
-                    analysis_data, interaction_log = ai_engine.analyze_code(file_path.name, content)
-                else:
-                    deps_context = {}
-                    for dp in deps_paths:
-                        deps_context[dp.name] = scanner.read_file(dp) if args.full_deps else scanner.get_skeleton(dp)
-                    
-                    reporter.console.print(f"[dim]Deep Analyzing {rel_file_path}...[/dim]", end="\r")
-                    analysis_data, interaction_log = ai_engine.analyze_deep(file_path.name, content, deps_context, full_context=args.full_deps)
-                
-                analyzed_files.add(file_path)
-            else:
-                content = scanner.read_file(file_path)
-                if not content.strip():
-                    reporter.log_result(rel_file_path, "[SAFE]", "Empty file")
-                    continue
-
-                reporter.console.print(f"[dim]Analyzing {rel_file_path}...[/dim]", end="\r")
-                analysis_data, interaction_log = ai_engine.analyze_code(file_path.name, content)
-
-            if interaction_log:
-                reporter.log_interaction(rel_file_path, interaction_log)
-
-            # Process structured result
-            if analysis_data:
-                status = analysis_data.get("status", "UNKNOWN")
-                reason = analysis_data.get("reason", "No reason provided.")
-                
-                # Format status for reporter
-                if status == "SAFE": status_tag = "[SAFE]"
-                elif status == "WARNING": status_tag = "[WARNING]"
-                elif status == "DANGER": status_tag = "[DANGER]"
-                else: status_tag = "ERROR"
-                
-                reporter.log_result(rel_file_path, status_tag, reason)
-
-    except KeyboardInterrupt:
-        reporter.console.print("\n[bold yellow]Scan interrupted by user.[/bold yellow]")
+    reports_initialized = False
+    interrupted = False
+    fatal_error = None
     
-    if files_found == 0:
-        reporter.console.print("[yellow]No relevant source files found to scan.[/yellow]")
-    else:
-        if not args.dry_run:
+    try:
+        try:
+            all_files = list(scanner.get_files())
+            if not args.dry_run:
+                reporter.init_reports(len(all_files))
+                reports_initialized = True
+                
+            for file_path in all_files:
+                files_found += 1
+                rel_file_path = os.path.relpath(file_path, target_path)
+
+                if args.dry_run:
+                    reporter.console.print(f"[dim]Found: {rel_file_path}[/dim]")
+                    continue
+
+                try:
+                    analysis_data = None
+                    interaction_log = None
+                    if args.deep:
+                        if file_path in analyzed_files: continue
+                        
+                        content = scanner.read_file(file_path)
+                        if not content.strip():
+                            reporter.log_result(rel_file_path, "[SAFE]", "Empty file")
+                            continue
+
+                        deps_paths = scanner.extract_dependencies(file_path, content)
+                        if not deps_paths:
+                            reporter.console.print(f"[dim]Analyzing {rel_file_path}...[/dim]", end="\r")
+                            analysis_data, interaction_log = ai_engine.analyze_code(file_path.name, content)
+                        else:
+                            deps_context = {}
+                            for dp in deps_paths:
+                                deps_context[dp.name] = scanner.read_file(dp) if args.full_deps else scanner.get_skeleton(dp)
+                            
+                            reporter.console.print(f"[dim]Deep Analyzing {rel_file_path}...[/dim]", end="\r")
+                            analysis_data, interaction_log = ai_engine.analyze_deep(file_path.name, content, deps_context, full_context=args.full_deps)
+                        
+                        analyzed_files.add(file_path)
+                    else:
+                        content = scanner.read_file(file_path)
+                        if not content.strip():
+                            reporter.log_result(rel_file_path, "[SAFE]", "Empty file")
+                            continue
+
+                        reporter.console.print(f"[dim]Analyzing {rel_file_path}...[/dim]", end="\r")
+                        analysis_data, interaction_log = ai_engine.analyze_code(file_path.name, content)
+
+                    if interaction_log:
+                        reporter.log_interaction(rel_file_path, interaction_log)
+
+                    # Process structured result
+                    if analysis_data:
+                        status = analysis_data.get("status", "UNKNOWN")
+                        reason = analysis_data.get("reason", "No reason provided.")
+                        
+                        # Format status for reporter
+                        if status == "SAFE": status_tag = "[SAFE]"
+                        elif status == "WARNING": status_tag = "[WARNING]"
+                        elif status == "DANGER": status_tag = "[DANGER]"
+                        else: status_tag = "ERROR"
+                        
+                        reporter.log_result(rel_file_path, status_tag, reason)
+                except FileReadError as e:
+                    reporter.log_result(rel_file_path, "ERROR", str(e))
+
+        except KeyboardInterrupt:
+            interrupted = True
+            reporter.console.print("\n[bold yellow]Scan interrupted by user.[/bold yellow]")
+        except Exception as e:
+            fatal_error = e
+            reporter.console.print(f"\n[bold red]Fatal error:[/bold red] {e}")
+    finally:
+        if files_found == 0:
+            reporter.console.print("[yellow]No relevant source files found to scan.[/yellow]")
+        elif not args.dry_run:
             reporter.print_summary()
-            reporter.finalize_reports()
+            if reports_initialized:
+                reporter.finalize_reports()
+
+    if fatal_error:
+        sys.exit(1)
+    if interrupted:
+        sys.exit(130)
 
 if __name__ == "__main__":
     main()

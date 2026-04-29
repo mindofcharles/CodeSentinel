@@ -12,11 +12,19 @@ CodeSentinel is an AI-powered security auditor designed to scan project director
 > Read-only scan of target files/directories \
 > no modifications are made to the scanned content.
 
+Many thanks to Gemini and GPT for their help!
+
+> [!TIP]
+> If you notice any issues or have any suggestions and have the time, \
+> please leave them in the Issues section. Thank you.
+
+[👉 Project Architecture](docs/Architecture.md) | [👉 Documents](docs/)
+
 ## ✨ Features
 
 - **AI-Powered Analysis**: Uses LLMs to audit code for backdoors, SQL injection, `eval()` usage, and more.
 - **Deep Analysis Mode**: Traces cross-file logic by providing the AI with the context of local dependencies (either full code or skeletal structures).
-- **Multi-Language Support**: Simply install the corresponding Tree-sitter package.
+- **Multi-Language Support**: Install the corresponding Tree-sitter parser package for languages you want structural dependency analysis for.
 - **Intelligent Skeletons**: Extracts class and function signatures to provide context without exhausting LLM token limits.
 - **Detailed Reporting**: Generates interactive CLI output and structured JSON reports (Full scan vs. Problems only).
 - **Flexible Backend**: Compatible with OpenAI, LM Studio, llama.cpp, and other OpenAI-compatible APIs.
@@ -93,8 +101,14 @@ Reports are saved in the `reports/scan_YYYYMMDD_HHMMSS/` directory:
 Run the test suite:
 
 ```bash
-python -m unittest discover test
+venv/bin/python test/main_test.py
+```
+
+The legacy unittest discovery command is also supported:
+
+```bash
+venv/bin/python -m unittest discover test
 ```
 
 ---
-*Documentation maintained by mindofcharles. Last updated: 2026-04-24.*
+*Documentation maintained by mindofcharles and AI. Last updated: 2026-04-29.*
