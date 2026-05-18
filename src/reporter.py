@@ -23,11 +23,8 @@ class Reporter:
         self.report_dir = "reports"
         self.scan_path = None
         self.logs_path = None
-        self.full_report_file = None
-        self.problems_report_file = None
-        
-        self.full_has_items = False
-        self.problems_has_items = False
+        self.full_report_data = None
+        self.problems_report_data = None
         self.problems_count = 0
         
         # Tree visualization
@@ -98,40 +95,38 @@ class Reporter:
                 file_console.print(self.last_tree)
         
         # Initialize Full Report
-        full_path = os.path.join(self.scan_path, "full_report.json")
-        self.full_report_file = open(full_path, 'w', encoding='utf-8')
-        # Write header
-        header = {
+        self.full_report_data = {
             "meta": {
                 "scan_time": self.start_time.isoformat(),
                 "total_files": total_files
             },
             "results": []
         }
-        # Write everything up to the opening bracket of results
-        json_str = json.dumps(header, indent=2)
-        # Remove the closing ]} and potential newline to prepare for appending
-        # Expected: ... "results": [] }
-        # We want: ... "results": [
-        preamble = json_str.rpartition('[')[0] + '['
-        self.full_report_file.write(preamble)
-        self.full_report_file.flush()
+        self._write_full_report()
 
         # Initialize Problems Report
-        problems_path = os.path.join(self.scan_path, "problems_report.json")
-        self.problems_report_file = open(problems_path, 'w', encoding='utf-8')
-        # We don't know total problems yet, so we use a placeholder or omit it
-        p_header = {
+        self.problems_report_data = {
             "meta": {
-                "scan_time": self.start_time.isoformat(),
-                "note": "See summary for total count"
+                "scan_time": self.start_time.isoformat()
             },
-            "results": []
+            "results": [],
+            "summary": {
+                "total_problems": 0
+            }
         }
-        p_json_str = json.dumps(p_header, indent=2)
-        p_preamble = p_json_str.rpartition('[')[0] + '['
-        self.problems_report_file.write(p_preamble)
-        self.problems_report_file.flush()
+        self._write_problems_report()
+
+    def _write_full_report(self):
+        if self.scan_path and self.full_report_data is not None:
+            full_path = os.path.join(self.scan_path, "full_report.json")
+            with open(full_path, 'w', encoding='utf-8') as f:
+                json.dump(self.full_report_data, f, indent=2)
+
+    def _write_problems_report(self):
+        if self.scan_path and self.problems_report_data is not None:
+            problems_path = os.path.join(self.scan_path, "problems_report.json")
+            with open(problems_path, 'w', encoding='utf-8') as f:
+                json.dump(self.problems_report_data, f, indent=2)
 
     def log_interaction(self, file_path, interaction_data):
         """Saves raw AI input and output to a plain text log file for debugging."""
@@ -219,37 +214,20 @@ class Reporter:
         self.console.print(f"[{color}][{icon}] {filename}[/{color}]: {analysis}")
 
         # Stream to Full Report
-        if self.full_report_file:
-            prefix = ",\n" if self.full_has_items else "\n"
-            self.full_report_file.write(prefix + json.dumps(result_obj, indent=2))
-            self.full_report_file.flush()
-            self.full_has_items = True
+        if self.full_report_data is not None:
+            self.full_report_data["results"].append(result_obj)
+            self._write_full_report()
 
         # Stream to Problems Report (if not safe)
         if not is_safe:
-            if self.problems_report_file:
-                prefix = ",\n" if self.problems_has_items else "\n"
-                self.problems_report_file.write(prefix + json.dumps(result_obj, indent=2))
-                self.problems_report_file.flush()
-                self.problems_has_items = True
+            if self.problems_report_data is not None:
+                self.problems_report_data["results"].append(result_obj)
                 self.problems_count += 1
+                self.problems_report_data["summary"]["total_problems"] = self.problems_count
+                self._write_problems_report()
 
     def finalize_reports(self):
-        """Closes the JSON arrays and files."""
-        # Close Full Report
-        if self.full_report_file:
-            self.full_report_file.write("\n  ]\n}")
-            self.full_report_file.close()
-            self.full_report_file = None
-
-        # Close Problems Report
-        if self.problems_report_file:
-            self.problems_report_file.write("\n  ],\n")
-            summary_footer = json.dumps({"summary": {"total_problems": self.problems_count}}, indent=2)
-            self.problems_report_file.write('  "summary": {\n    "total_problems": ' + str(self.problems_count) + '\n  }\n}')
-            self.problems_report_file.close()
-            self.problems_report_file = None
-
+        """Prints final summary of report locations."""
         if self.scan_path:
             self.console.print(f"\n[bold]Reports saved to directory:[/bold] {self.scan_path}")
             self.console.print(f"  - Full Report: full_report.json")
@@ -273,11 +251,4 @@ class Reporter:
 
     def close(self):
         """Safely closes files if open (destructor-like)."""
-        if self.full_report_file:
-            try:
-                self.full_report_file.close()
-            except: pass
-        if self.problems_report_file:
-            try:
-                self.problems_report_file.close()
-            except: pass
+        pass
