@@ -55,8 +55,9 @@ Many thanks to Gemini and GPT for their help!
 
 ## ⚙️ Configuration
 
-Edit `config.yaml` or use environment variables to configure the scanner:
+CodeSentinel uses a modular configuration system. Edit the main `config.yaml` or the specific module files inside the `config/` directory (e.g., `config/file_rules.yaml`, `config/prompts.yaml`).
 
+Key settings in `config.yaml`:
 - `openai_api_key`: Your API key (default: `any-key-for-local`).
 - `openai_base_url`: The API endpoint (e.g., `http://localhost:1234/v1` for LM Studio).
 - `ai_model`: The name of the model to use.

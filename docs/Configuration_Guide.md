@@ -16,9 +16,19 @@ CodeSentinel can be configured through three primary methods, prioritized as fol
 | Temperature | `ai_temperature` | `--temperature` | - |
 | Max Tokens | `ai_max_tokens` | `--max-tokens` | - |
 
+## Modular Configuration (`config/`)
+
+To keep settings organized, CodeSentinel splits its configuration into modular files using the `includes` directive in the main `config.yaml`:
+
+- `config/file_rules.yaml`: Contains lists of `target_extensions` and `ignore_dirs`.
+- `config/prompts.yaml`: Contains the system and user prompts for different analysis modes.
+- `config/tree_sitter.yaml`: Contains the syntax AST rules for dependency extraction.
+
+If any file specified in the `includes` section is missing, CodeSentinel will immediately exit with an error to ensure consistent behavior.
+
 ## File Handling Settings
 
-Modify these directly in `config.yaml`:
+Modify `max_file_size` directly in `config.yaml`, and manage extensions/ignores in `config/file_rules.yaml`:
 
 - `max_file_size`: (Default: 10MB) Files exceeding this limit will be truncated before being sent to the AI.
 - `target_extensions`: A list of file extensions that the scanner will process (e.g., `.py`, `.js`, `.go`).

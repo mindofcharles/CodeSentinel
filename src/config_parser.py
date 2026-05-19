@@ -1,6 +1,7 @@
 import os
 import yaml
 import pathlib
+import sys
 
 class ConfigParser:
     def __init__(self):
@@ -22,6 +23,16 @@ class ConfigParser:
         if config_path.exists():
             with open(config_path, 'r', encoding='utf-8') as f:
                 data = yaml.safe_load(f) or {}
+
+            if "includes" in data:
+                for inc_key, inc_path_str in data["includes"].items():
+                    inc_path = (config_path.parent / inc_path_str).resolve()
+                    if not inc_path.exists():
+                        print(f"Error: Included configuration file '{inc_path}' not found.", file=sys.stderr)
+                        sys.exit(1)
+                    with open(inc_path, 'r', encoding='utf-8') as inc_f:
+                        inc_data = yaml.safe_load(inc_f) or {}
+                        data.update(inc_data)
             
             self.OPENAI_BASE_URL = data.get("openai_base_url", self.OPENAI_BASE_URL)
             self.AI_MODEL = data.get("ai_model", self.AI_MODEL)

@@ -1,0 +1,82 @@
+target_extensions:
+
+  # Python
+  - ".py"
+
+  # C / C++
+  - ".c"
+  - ".cpp"
+  - ".cc"
+  - ".cxx"
+  - ".h"
+  - ".hpp"
+
+  # Go
+  - ".go"
+
+  # Rust
+  - ".rs"
+
+  # C#
+  - ".cs"
+
+  # Java
+  - ".java"
+
+  # JavaScript / TypeScript
+  - ".js"
+  - ".mjs"
+  - ".cjs"
+  - ".ts"
+  - ".jsx"
+  - ".tsx"
+
+  # Markup
+  - ".html"
+  - ".xml"
+  
+  # Data
+  - ".json"
+  - ".yaml"
+  - ".yml"
+
+  # Scripting
+  - ".sh"
+  - ".bash"
+  - ".zsh"
+  - ".bat"
+  - ".cmd"
+  - ".ps1"
+
+  # Other languages
+  - ".php"
+  - ".rb"
+
+ignore_dirs:
+
+  # VCS
+  - ".git"
+  - ".svn"
+  - ".hg"
+
+  # Node
+  - "node_modules"
+
+  # Python
+  - "venv"
+  - ".venv"
+  - "env"
+  - "__pycache__"
+
+  # Build outputs
+  - "dist"
+  - "build"
+  - "target"
+  - "bin"
+  - "obj"
+  - "lib"
+  - "libs"
+
+  # IDE
+  - ".idea"
+  - ".vscode"
