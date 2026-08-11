@@ -2,6 +2,8 @@
 
 CodeSentinel uses the OpenAI Python SDK, making it compatible with any API that adheres to the OpenAI chat completions specification.
 
+For accurate prompt sizing, export the model's Hugging Face-compatible `tokenizer.json` and set `tokenizer_path` in `config.yaml`. Without one, CodeSentinel uses a conservative local estimate powered by `tokenizers` and does not download a tokenizer at runtime.
+
 ## Local LLMs (Recommended)
 
 Running a local LLM ensures your code never leaves your machine.
@@ -28,7 +30,7 @@ Running a local LLM ensures your code never leaves your machine.
 2. In `config.yaml`, set:
 
    ```yaml
-   openai_base_url: "http://localhost:1234/v1"
+   openai_base_url: "http://localhost:8900/v1"
    ai_model: "your-model-id" # Copy from llama.cpp
    ```
 

@@ -12,57 +12,88 @@ tree_sitter:
       (import_from_statement module_name: (relative_import) name: (aliased_import name: (dotted_name) @mod))
 
   cpp:
-      package: "tree_sitter_cpp"
-      extensions: [".c", ".cpp", ".cc", ".cxx", ".h", ".hpp"]
-      skeleton_query: |
-        (function_definition declarator: (function_declarator declarator: (identifier) @name))
-        (class_specifier name: (type_identifier) @name)
-        (struct_specifier name: (type_identifier) @name)
-      deps_query: |
-        (preproc_include path: (string_literal) @mod)
-        (preproc_include path: (system_lib_string) @mod)
+    package: "tree_sitter_cpp"
+    extensions: [".c", ".cpp", ".cc", ".cxx", ".h", ".hpp"]
+    skeleton_query: |
+      (function_definition declarator: (function_declarator declarator: (identifier) @name))
+      (class_specifier name: (type_identifier) @name)
+      (struct_specifier name: (type_identifier) @name)
+    deps_query: |
+      (preproc_include path: (string_literal) @mod)
+      (preproc_include path: (system_lib_string) @mod)
 
   javascript:
     package: "tree_sitter_javascript"
-    extensions: [".js", ".ts", ".jsx", ".tsx"]
+    extensions: [".js", ".mjs", ".cjs", ".jsx"]
     skeleton_query: |
-      (class_definition name: (identifier) @name)
-      (function_definition name: (identifier) @name)
+      (class_declaration name: (identifier) @name)
+      (function_declaration name: (identifier) @name)
+      (generator_function_declaration name: (identifier) @name)
       (method_definition name: (property_identifier) @name)
       (variable_declarator name: (identifier) @name value: (arrow_function))
     deps_query: |
       (import_statement source: (string) @mod)
       (call_expression function: (identifier) @func (#eq? @func "require") arguments: (arguments (string) @mod))
 
+  typescript:
+    package: "tree_sitter_typescript"
+    language_function: "language_typescript"
+    extensions: [".ts"]
+    skeleton_query: |
+      (class_declaration name: (type_identifier) @name)
+      (function_declaration name: (identifier) @name)
+      (method_definition name: (property_identifier) @name)
+      (interface_declaration name: (type_identifier) @name)
+      (type_alias_declaration name: (type_identifier) @name)
+      (variable_declarator name: (identifier) @name value: (arrow_function))
+    deps_query: |
+      (import_statement source: (string) @mod)
+      (call_expression function: (identifier) @func (#eq? @func "require") arguments: (arguments (string) @mod))
+
+  tsx:
+    package: "tree_sitter_typescript"
+    language_function: "language_tsx"
+    extensions: [".tsx"]
+    skeleton_query: |
+      (class_declaration name: (type_identifier) @name)
+      (function_declaration name: (identifier) @name)
+      (method_definition name: (property_identifier) @name)
+      (interface_declaration name: (type_identifier) @name)
+      (type_alias_declaration name: (type_identifier) @name)
+      (variable_declarator name: (identifier) @name value: (arrow_function))
+    deps_query: |
+      (import_statement source: (string) @mod)
+      (call_expression function: (identifier) @func (#eq? @func "require") arguments: (arguments (string) @mod))
+
   go:
-      package: "tree_sitter_go"
-      extensions: [".go"]
-      skeleton_query: |
-        (function_declaration name: (identifier) @name)
-        (method_declaration name: (field_identifier) @name)
-        (type_declaration (type_spec name: (type_identifier) @name))
-      deps_query: |
-        (import_spec path: (interpreted_string_literal) @mod)
-        (import_spec path: (raw_string_literal) @mod)
+    package: "tree_sitter_go"
+    extensions: [".go"]
+    skeleton_query: |
+      (function_declaration name: (identifier) @name)
+      (method_declaration name: (field_identifier) @name)
+      (type_declaration (type_spec name: (type_identifier) @name))
+    deps_query: |
+      (import_spec path: (interpreted_string_literal) @mod)
+      (import_spec path: (raw_string_literal) @mod)
 
   rust:
-      package: "tree_sitter_rust"
-      extensions: [".rs"]
-      skeleton_query: |
-        (function_item name: (identifier) @name)
-        (struct_item name: (type_identifier) @name)
-        (enum_item name: (type_identifier) @name)
-        (impl_item type: (type_identifier) @name)
-      deps_query: |
-        (use_declaration argument: (_) @mod)
-        (extern_crate_declaration name: (identifier) @mod)
+    package: "tree_sitter_rust"
+    extensions: [".rs"]
+    skeleton_query: |
+      (function_item name: (identifier) @name)
+      (struct_item name: (type_identifier) @name)
+      (enum_item name: (type_identifier) @name)
+      (impl_item type: (type_identifier) @name)
+    deps_query: |
+      (use_declaration argument: (_) @mod)
+      (extern_crate_declaration name: (identifier) @mod)
 
   java:
-      package: "tree_sitter_java"
-      extensions: [".java"]
-      skeleton_query: |
-        (class_declaration name: (identifier) @name)
-        (interface_declaration name: (identifier) @name)
-        (method_declaration name: (identifier) @name)
-      deps_query: |
-        (import_declaration (_) @mod)
+    package: "tree_sitter_java"
+    extensions: [".java"]
+    skeleton_query: |
+      (class_declaration name: (identifier) @name)
+      (interface_declaration name: (identifier) @name)
+      (method_declaration name: (identifier) @name)
+    deps_query: |
+      (import_declaration (_) @mod)

@@ -6,6 +6,8 @@ CodeSentinel can be configured through three primary methods, prioritized as fol
 2. **Environment Variables**
 3. **`config.yaml`** (Default values)
 
+The default file is resolved relative to the CodeSentinel source tree, not the current working directory. Use `--config PATH` or the `CODESENTINEL_CONFIG` environment variable to select another main file.
+
 ## Core Settings
 
 | Setting | `config.yaml` key | CLI Argument | Env Variable |
@@ -15,6 +17,9 @@ CodeSentinel can be configured through three primary methods, prioritized as fol
 | Model Name | `ai_model` | `--model` | - |
 | Temperature | `ai_temperature` | `--temperature` | - |
 | Max Tokens | `ai_max_tokens` | `--max-tokens` | - |
+| Context Window | `ai_context_window` | `--context-window` | - |
+| Tokenizer JSON | `tokenizer_path` | `--tokenizer` | - |
+| Dependency Depth | `dependency_max_depth` | `--dependency-depth` | - |
 
 ## Modular Configuration (`config/`)
 
@@ -30,7 +35,7 @@ If any file specified in the `includes` section is missing, CodeSentinel will im
 
 Modify `max_file_size` directly in `config.yaml`, and manage extensions/ignores in `config/file_rules.yaml`:
 
-- `max_file_size`: (Default: 10MB) Files exceeding this limit will be truncated before being sent to the AI.
+- `max_file_size`: (Default: 10MB) Hard disk-read byte limit. Token budgeting applies an additional prompt limit.
 - `target_extensions`: A list of file extensions that the scanner will process (e.g., `.py`, `.js`, `.go`).
 - `ignore_dirs`: A list of directory names to skip (e.g., `.git`, `node_modules`, `venv`).
 
@@ -38,7 +43,27 @@ Modify `max_file_size` directly in `config.yaml`, and manage extensions/ignores 
 
 The base `tree-sitter` package enables structural parsing, but each language needs its own parser package, such as `tree-sitter-python` or `tree-sitter-javascript`.
 
-If a parser configured in `config.yaml` is missing, CodeSentinel warns before scanning and skips dependency extraction/skeleton extraction for that language. The scanner does not install parser packages automatically.
+The pinned requirements include every configured parser. If one cannot be loaded, CodeSentinel warns before scanning and skips structural extraction for that language.
+
+## Token and Dependency Budgets
+
+- `ai_context_window`: Total model context capacity.
+- `ai_max_tokens`: Tokens reserved for the response.
+- `ai_token_safety_margin`: Capacity reserved for provider-specific chat-template overhead.
+- `main_file_token_budget`: Maximum for the primary file.
+- `dependency_token_budget`: Shared maximum for dependency context.
+- `dependency_file_token_budget`: Per-dependency maximum.
+- `dependency_max_depth` and `max_dependencies`: Bound recursive graph traversal.
+
+Set `tokenizer_path` to the model's `tokenizer.json` for exact model tokenization. If empty, CodeSentinel uses `tokenizers` ByteLevel splitting plus a conservative UTF-8 byte estimate.
+
+## Reporting and Sensitive Logs
+
+- `report_sync_interval`: Processed files between progress/fsync checkpoints.
+- `max_tree_entries`: Skips expensive tree rendering for larger scans.
+- `save_interaction_logs`: Disabled by default because prompts may contain secrets and proprietary source.
+- `redact_interaction_logs`: Applies basic API-key, credential, access-token, and PEM redaction.
+- `follow_symlinks`: Disabled by default. Enabled links must still resolve inside the scan root.
 
 ## Environment Variables
 

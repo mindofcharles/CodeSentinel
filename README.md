@@ -23,8 +23,9 @@ Many thanks to Gemini and GPT for their help!
 ## ✨ Features
 
 - **AI-Powered Analysis**: Uses LLMs to audit code for backdoors, SQL injection, `eval()` usage, and more.
-- **Deep Analysis Mode**: Traces cross-file logic by providing the AI with the context of local dependencies (either full code or skeletal structures).
-- **Multi-Language Support**: Install the corresponding Tree-sitter parser package for languages you want structural dependency analysis for.
+- **Deep Analysis Mode**: Recursively follows a bounded local dependency graph and provides full code or skeletal structures to the AI.
+- **Token-Aware Prompts**: Uses `tokenizers` with a model `tokenizer.json`, or a conservative ByteLevel fallback, to stay inside the configured context window.
+- **Multi-Language Support**: Includes parsers for Python, JavaScript, TypeScript/TSX, C/C++, Go, Rust, and Java.
 - **Intelligent Skeletons**: Extracts class and function signatures to provide context without exhausting LLM token limits.
 - **Detailed Reporting**: Generates interactive CLI output and structured JSON reports (Full scan vs. Problems only).
 - **Flexible Backend**: Compatible with OpenAI, LM Studio, llama.cpp, and other OpenAI-compatible APIs.
@@ -50,7 +51,7 @@ Many thanks to Gemini and GPT for their help!
    ```bash
    python -m venv venv
    source venv/bin/activate
-   pip install -r requirements.txt
+   pip install -r requirements.lock
    ```
 
 ## ⚙️ Configuration
@@ -58,9 +59,13 @@ Many thanks to Gemini and GPT for their help!
 CodeSentinel uses a modular configuration system. Edit the main `config.yaml` or the specific module files inside the `config/` directory (e.g., `config/file_rules.yaml`, `config/prompts.yaml`).
 
 Key settings in `config.yaml`:
+
 - `openai_api_key`: Your API key (default: `any-key-for-local`).
 - `openai_base_url`: The API endpoint (e.g., `http://localhost:1234/v1` for LM Studio).
 - `ai_model`: The name of the model to use.
+- `ai_context_window`: Total model context size, including prompt and response.
+- `tokenizer_path`: Optional model `tokenizer.json` path for exact token counting.
+- `save_interaction_logs`: Saves redacted prompts only when explicitly enabled; default is `false`.
 
 ## 📖 Usage
 
@@ -87,15 +92,22 @@ python -m src.main --dir ./path/to/project --deep
 - `--model <name>`: Override the model specified in config.
 - `--url <url>`: Override the API base URL.
 - `--full-deps`: In deep mode, include the full source code of dependencies instead of just skeletons.
+- `--dependency-depth <n>`: Limit recursive dependency traversal.
+- `--context-window <n>`: Override the model context-window size.
+- `--tokenizer <path>`: Use a model-specific `tokenizer.json`.
+- `--save-prompts`: Save redacted AI interactions (disabled by default).
+- `--config <path>`: Load an alternate main configuration file.
 
 ## 📊 Reports
 
 Reports are saved in the `reports/scan_YYYYMMDD_HHMMSS/` directory:
 
-- `full_report.json`: Detailed results for every scanned file.
+- `full_report.json`: Atomic final report with coverage, completion state, counters, and every result.
+- `full_report.jsonl`: Append-only recovery stream written during scanning.
 - `problems_report.json`: Filtered results containing only `[DANGER]` and `[WARNING]` status.
 - `project_structure.txt`: A text-based visualization of the scanned directory.
-- `logs/`: Raw AI interaction logs, mirroring the scanned project's structure.
+- `progress.json`: Atomic progress snapshot updated periodically.
+- `logs/`: Optional redacted interactions, created only with `--save-prompts`.
 
 ## 🧪 Testing
 
@@ -112,4 +124,4 @@ venv/bin/python -m unittest discover test
 ```
 
 ---
-*Documentation maintained by mindofcharles and AI. Last updated: 2026-04-29.*
+*Documentation maintained by mindofcharles and AI. Last updated: 2026-08-11.*

@@ -6,14 +6,16 @@ Standard security scanners often look at files in isolation. CodeSentinel's **De
 
 When `--deep` is enabled, CodeSentinel performs the following steps for each file:
 
-1. **Dependency Extraction**: It uses Tree-sitter to find `import` statements (Python) or `require/import` statements (JS/TS).
-2. **Path Resolution**: It attempts to find the corresponding source file on the local file system.
-3. **Context Building**:
+1. **Dependency Extraction**: It uses configured Tree-sitter grammars to find imports and includes.
+2. **Path Resolution**: It resolves only local files contained by the scan root.
+3. **Recursive Graph Traversal**: It follows dependencies to `dependency_max_depth`, stops cycles, de-duplicates paths, and respects `max_dependencies`.
+4. **Context Building**:
     - By default, it extracts a **Skeleton** of the dependency (class and function signatures).
     - If `--full-deps` is used, it reads the **entire source code** of the dependency.
-4. **AI Audit**: The AI receives the main file's code *plus* the context of all resolved dependencies, allowing it to trace logic across file boundaries.
+5. **Token Budgeting**: Main source and dependency context are independently fitted to configured token budgets.
+6. **AI Audit**: The AI receives the fitted main file and dependency graph context.
 
-If a configured Tree-sitter parser package is not installed, CodeSentinel warns before scanning and skips structural dependency extraction for that language. The file can still be scanned in standard mode, but deep dependency context for that language will be incomplete.
+If a configured parser cannot be loaded, CodeSentinel warns before scanning and skips structural dependency extraction for that language. The file can still be scanned in standard mode.
 
 ## Skeletons vs. Full Deps
 
@@ -34,7 +36,11 @@ Skeletons are designed to save tokens and fit within the LLM's context window.
 ### Full Dependencies (`--full-deps`)
 
 - **Pros**: Most accurate analysis; AI can see exactly what the dependency does.
-- **Cons**: High token usage, slower, may exceed model limits for large projects. Context-limit errors are reported immediately instead of being retried.
+- **Cons**: Higher token usage and slower scans. Excess context is truncated before the request; provider-side context errors are reported without retrying.
+
+## Limits and Safety
+
+Deep mode provides bounded dependency context, not a formal static taint-analysis proof. Dynamic imports, reflection, generated code, framework routing, and unsupported package-resolution rules may remain invisible. Treat results as review assistance rather than a security guarantee.
 
 ## Use Cases
 

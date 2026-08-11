@@ -2,6 +2,7 @@ import unittest
 import os
 import pathlib
 import sys
+import tempfile
 from src.scanner import FileReadError, Scanner
 from src.config_parser import config
 
@@ -67,6 +68,43 @@ class TestScanner(unittest.TestCase):
 
         with self.assertRaises(FileReadError):
             self.scanner.read_file(missing_path)
+
+    def test_recursive_dependencies_use_distinct_relative_paths(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = pathlib.Path(tmpdir)
+            (root / "pkg_a").mkdir()
+            (root / "pkg_b").mkdir()
+            (root / "main.py").write_text("import pkg_a.mod\nimport pkg_b.mod\n", encoding="utf-8")
+            (root / "pkg_a/mod.py").write_text("import pkg_a.helper\n", encoding="utf-8")
+            (root / "pkg_b/mod.py").write_text("import pkg_b.helper\n", encoding="utf-8")
+            (root / "pkg_a/helper.py").write_text("def a(): pass\n", encoding="utf-8")
+            (root / "pkg_b/helper.py").write_text("def b(): pass\n", encoding="utf-8")
+            scanner = Scanner(str(root))
+            scanner.pre_scan_check()
+
+            main_path = root / "main.py"
+            context = scanner.collect_dependency_context(
+                main_path,
+                scanner.read_file(main_path),
+                max_depth=2,
+            )
+
+            self.assertEqual(
+                {"pkg_a/mod.py", "pkg_b/mod.py", "pkg_a/helper.py", "pkg_b/helper.py"},
+                set(context),
+            )
+
+    def test_external_file_symlink_is_not_scanned(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = pathlib.Path(tmpdir)
+            target = base / "target"
+            target.mkdir()
+            external = base / "external.py"
+            external.write_text("print('outside')", encoding="utf-8")
+            (target / "linked.py").symlink_to(external)
+            scanner = Scanner(str(target))
+
+            self.assertEqual([], list(scanner.get_files()))
 
 if __name__ == "__main__":
     unittest.main()

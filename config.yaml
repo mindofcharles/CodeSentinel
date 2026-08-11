@@ -4,7 +4,25 @@ ai_model: "AI"
 ai_temperature: 0.1
 ai_max_tokens: 32768
 ai_max_retries: 3
+
+# Input budgeting. Set tokenizer_path to a tokenizer.json matching the model.
+# If it is empty, CodeSentinel uses tokenizers' ByteLevel pre-tokenizer plus a
+# conservative UTF-8 byte estimate.
+ai_context_window: 32768
+ai_token_safety_margin: 512
+tokenizer_path: ""
+main_file_token_budget: 16000
+dependency_token_budget: 10000
+dependency_file_token_budget: 3000
+dependency_max_depth: 3
+max_dependencies: 100
+
 max_file_size: 10485760
+max_tree_entries: 5000
+report_sync_interval: 25
+save_interaction_logs: false
+redact_interaction_logs: true
+follow_symlinks: false
 
 includes:
   file_rules: "config/file_rules.yaml"
